@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+    <style src="./chatstyle.css">
+        
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #f8f9fa;
+}
+.form-chat {
+    width: 100%;
+    max-width: 330px;
+    padding: 15px;
+    margin: auto;
+}
+.chat-response {
+    border: 1px solid #ced4da;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    background-color: #e9ecef;
+}
+button{
+    margin-top: 1em;
+
+}
+.past-messages {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <form class="form-chat text-center" action="/chat" method="post">
+        <h1 class="h3 mb-3 font-weight-normal">Háblame de lo que quieras</h1>
+        {% if response %}
+        <div class="chat-response">{{ response }}</div>
+        {% endif %}
+        <label for="message" class="sr-only">Mensaje</label>
+        <input type="text" id="message" name="message" class="form-control" placeholder="Ingresa tu mensaje" required autofocus>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Enviar</button>
+    </form>
+</body>
+</html>
