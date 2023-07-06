@@ -1,59 +1,126 @@
 <!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chatbot Microsoft</title>
-    <link
-      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
-      rel="stylesheet"/>
+<html>
+<head>
+    <title>Chat</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
     <style>
-      /* CSS styles here */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f8f9fa;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            padding: 15px;
+            margin: auto;
+        }
+        .message-container {
+            margin-bottom: 1em;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .assistant-message {
+            background-color: #f8f9fa;
+            color: #000;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .input-container {
+            display: flex;
+        }
+        .input-field {
+            flex: 1;
+            margin-right: 1em;
+        }
+        .input-button {
+            width: 100px;
+        }
     </style>
-  </head>
-  <body>
-    <main class="chat-box">
-      <h1 class="chat-title">Alexia.</h1>
-      <h2 class="chat-subheading">Ten el acceso a la inteligencia artificial más avanzada.</h2>
-      <form id="chat-form">
-        <label for="message" class="sr-only">Mensaje</label>
-        <input class
-          type="text"
-          id="message"
-          name="message"
-          class="message-input"
-          placeholder="Ingresa tu mensaje"
-          required
-          autofocus
-        />
-        <button class="submit-button" type="submit">Enviar</button>
-      </form>
-    </main>
-    <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
-    <script async src="script.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Chat</h1>
+        <div id="messages-container">
+            {% for message in messages %}
+                {% if message.role == 'user' %}
+                    <div class="message-container">
+                        <span class="user-message">{{ message.content }}</span>
+                    </div>
+                {% else %}
+                    <div class="message-container">
+                        <span class="assistant-message">{{ message.content }}</span>
+                    </div>
+               {% endif %}
+            {% endfor %}
+        </div>
+        <div class="input-container">
+            <input id="message-input" class="input-field form-control" type="text" placeholder="Escribe un mensaje" autocomplete="off">
+            <button id="send-button" class="input-button btn btn-primary" type="button">Enviar</button>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
-      // JavaScript code here
-      const form = document.getElementById('chat-form');
-      const messageInput = document.getElementById('message');
+        $(document).ready(function() {
+            var messages = JSON.parse('{{ messages|tojson }}');
 
-      form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent form submission
+            function scrollToBottom() {
+                var messagesContainer = document.getElementById('messages-container');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
 
-        const message = messageInput.value;
-        displayMessage(message);
+            function addMessage(role, content) {
+                var messageContainer = $('<div class="message-container"></div>');
+                var message = $('<span></span>').addClass(role + '-message').text(content);
+                messageContainer.append(message);
+                $('#messages-container').append(messageContainer);
+                scrollToBottom();
+            }
 
-        // Clear input field
-        messageInput.value = '';
-      });
+            function sendMessage(message) {
+                addMessage('user', message);
+                $.ajax({
+                    url: '/chat',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ message: message }),
+                    success: function(response) {
+                        addMessage('assistant', response);
+                        messages.push({ role: 'user', content: message });
+                        messages.push({ role: 'assistant', content: response });
+                    }
+                });
+            }
 
-      function displayMessage(message) {
-        const chatResponse = document.createElement('div');
-        chatResponse.classList.add('chat-response');
-        chatResponse.textContent = message;
+            $('#send-button').click(function() {
+                var message = $('#message-input').val();
+                if (message !== '') {
+                    $('#message-input').val('');
+                    sendMessage(message);
+                }
+            });
 
-        const chatBox = document.querySelector('.chat-box');
-        chatBox.appendChild(chatResponse);
-      }
+            $('#message-input').keypress(function(event) {
+                if (event.which === 13) {
+                    var message = $('#message-input').val();
+                    if (message !== '') {
+                        $('#message-input').val('');
+                        sendMessage(message);
+                    }
+                }
+            });
+
+            scrollToBottom();
+        });
     </script>
-  </body>
+</body>
 </html>

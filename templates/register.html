@@ -11,16 +11,19 @@
             height: 100vh;
             background: #f8f9fa;
         }
-        .form-signin {
+        .form-register {
             width: 100%;
-            max-width: 330px;
+            max-width: 340px;
             padding: 15px;
             margin: auto;
+        }
+        button{
+            margin-top: 1em;
         }
     </style>
 </head>
 <body>
-    <form class="form-signin text-center" action="/registro" method="post">
+    <form class="form-register text-center" action="/registrar" method="post">
         <h1 class="h3 mb-3 font-weight-normal">Registro</h1>
         <label for="username" class="sr-only">Usuario</label>
         <input type="text" id="username" name="username" class="form-control" placeholder="Usuario" required autofocus>

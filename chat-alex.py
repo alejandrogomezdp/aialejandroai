@@ -8,7 +8,7 @@ db = SQLAlchemy(app)
 
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_input = db.Column(db.String(500))  # Changed to db.Column
+    user_input = db.Column(db.String(500))
     chatbot_response = db.Column(db.String(5000))
 
     def __init__(self, user_input, chatbot_response):
@@ -30,16 +30,15 @@ class Message(db.Model):
 
 openai.api_key = "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"
 
-
 @app.route("/chat", methods=["GET", "POST"])
 def chat():
+    messages = []
     if request.method == "POST":
-        user_input = request.form.get("user_input")  # Get the value from the form field named "user_input"
+        user_input = request.json.get("message")  # Get the value from the JSON field named "message"
         if user_input:  # Check if user_input is not None or an empty string
             conv = Conversation(user_input, "")
             db.session.add(conv)
             db.session.commit()
-
             user_msg = Message(content=user_input, role="user", conversation_id=conv.id)
             db.session.add(user_msg)
             db.session.commit()
@@ -61,10 +60,10 @@ def chat():
             db.session.commit()
 
         messages = Message.query.filter_by(conversation_id=conv.id).all()
-        return render_template("chat.html", messages=messages)
+        return response
 
     convs = Conversation.query.all()
-    return render_template("chat.html", conversations=convs)
+    return render_template("chat.html", conversations=convs, messages=messages)
 
 
 if __name__ == "__main__":
