@@ -1,5 +1,7 @@
 from flask import Flask, request, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from nltk import sent_tokenize, word_tokenize, pos_tag
+from bs4 import BeautifulSoup
 import openai
 
 app = Flask(__name__)
@@ -30,12 +32,37 @@ class Message(db.Model):
 
 openai.api_key = "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"
 
+def format_text(text):
+    sentences = sent_tokenize(text)
+
+    formatted_text = ""
+    for sentence in sentences:
+        words = word_tokenize(sentence)
+        tagged_words = pos_tag(words)
+
+        formatted_sentence = ""
+        for word, tag in tagged_words:
+            if tag.startswith("NN"):
+                formatted_sentence += f"<b>{word}</b> "
+            elif tag.startswith("VB"):
+                formatted_sentence += f"<i>{word}</i> "
+            else:
+                formatted_sentence += f"{word} "
+        
+        formatted_text += f"<p>{formatted_sentence}</p>"
+
+    soup = BeautifulSoup(formatted_text, "html.parser")
+    formatted_text = soup.prettify()
+
+    return formatted_text
+
+
 @app.route("/chat", methods=["GET", "POST"])
 def chat():
     messages = []
     if request.method == "POST":
-        user_input = request.json.get("message")  # Get the value from the JSON field named "message"
-        if user_input:  # Check if user_input is not None or an empty string
+        user_input = request.json.get("message")
+        if user_input:
             conv = Conversation(user_input, "")
             db.session.add(conv)
             db.session.commit()
@@ -55,7 +82,7 @@ def chat():
             )
 
             response = response.choices[0].message["content"]
-            bot_msg = Message(content=response, role="bot", conversation_id=conv.id)
+            bot_msg = Message(content=format_text(response), role="bot", conversation_id=conv.id)
             db.session.add(bot_msg)
             db.session.commit()
 
@@ -70,3 +97,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+

@@ -1,81 +1,57 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
-import openai
+from sqlalchemy.sql import func
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////conversations.db'  # replace with your own database URI
 db = SQLAlchemy(app)
 
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_input = db.Column(db.String(500))
-    chatbot_response = db.Column(db.String(5000))
-
-    def __init__(self, user_input, chatbot_response):
-        self.user_input = user_input
-        self.chatbot_response = chatbot_response
+    start_time = db.Column(db.DateTime(timezone=True), default=func.now())
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String(5000))
-    role = db.Column(db.String(10))
-    conversation_id = db.Column(db.Integer, db.ForeignKey("conversation.id"))
+    content = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(120), nullable=False)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'))
 
-    def __init__(self, content, role, conversation_id):
-        self.content = content
-        self.role = role
-        self.conversation_id = conversation_id
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'role': self.role,
+            'conversation_id': self.conversation_id,
+        }
 
-openai.api_key = "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"
+@app.route("/")
+def home():
+    return render_template("home.html")
 
-## -- INICIAR SESION -- ##
-
-@app.route("/iniciar-sesion", methods=["GET", "POST"])
+@app.route("/iniciar-sesion")
 def iniciar_sesion():
-    if request.method == "POST":
-        if valid_login(request.form["username"], request.form["password"]):
-            return redirect(url_for("chat"))
-        else:
-            return render_template("login.html", error="Usuario o contraseña inválidos")
-    return render_template("login.html")
+    return render_template("iniciar_sesion.html")
 
-def valid_login(username, password):
-    # Aquí puedes implementar tu lógica de autenticación
-    return True
+@app.route("/registro")
+def registro():
+    return render_template("registro.html")
 
-## -- /INICIAR SESION -- ##
-
-## -- CHAT -- ##
 @app.route("/chat", methods=["GET", "POST"])
 def chat():
+    messages = []  # Initialize messages here to ensure it's always defined
     if request.method == "POST":
-        user_input = request.form["message"]
-        conv = Conversation(user_input, "")
+        user_input = request.form.get("user_input")
+        conv = Conversation()
         db.session.add(conv)
         db.session.commit()
-        user_msg = Message(content=user_input, role="user", conversation_id=conv.id)
-        db.session.add(user_msg)
+        user_message = Message(content=user_input, role='user', conversation_id=conv.id)
+        db.session.add(user_message)
         db.session.commit()
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Eres un experto en programación reconocido y tutor con 10 años de codificación. Estás ayudando a un profesional con un problema de codificación.",
-                },
-                {"role": "user", "content": user_input},
-            ],
-        )
-        response = response.choices[0].message["content"]
-        bot_msg = Message(content=response, role="bot", conversation_id=conv.id)
-        db.session.add(bot_msg)
-        db.session.commit()
-        messages = Message.query.filter_by(conversation_id=conv.id).all()
-        return render_template("chat.html", messages=messages)
+
+        messages = [msg.to_dict() for msg in Message.query.filter_by(conversation_id=conv.id).all()]
+
     convs = Conversation.query.all()
-    return render_template("chat.html", conversations=convs)
+    return render_template("chat.html", conversations=convs, messages=messages)
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run(debug=True)

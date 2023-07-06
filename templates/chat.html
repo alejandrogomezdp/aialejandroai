@@ -12,23 +12,40 @@
             background: #f8f9fa;
         }
         .chat-container {
+            display: flex;
+            height: 80vh;
             width: 100%;
-            max-width: 500px;
-            padding: 15px;
-            margin: auto;
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar {
+            width: 300px;
+            background: #36393f;
+            color: #fff;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .chat-content {
+            flex: 1;
+            background: #f9f9f9;
+            padding: 20px;
+            overflow-y: auto;
         }
         .message-container {
             margin-bottom: 1em;
         }
         .user-message {
-            background-color: #007bff;
+            background-color: #7289da;
             color: #fff;
             padding: 8px 12px;
             border-radius: 8px;
             display: inline-block;
         }
         .assistant-message {
-            background-color: #f8f9fa;
+            background-color: #f0f0f0;
             color: #000;
             padding: 8px 12px;
             border-radius: 8px;
@@ -36,6 +53,7 @@
         }
         .input-container {
             display: flex;
+            margin-top: 20px;
         }
         .input-field {
             flex: 1;
@@ -44,27 +62,46 @@
         .input-button {
             width: 100px;
         }
+        .conversation-link {
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .conversation-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
-        <h1>Chat</h1>
-        <div id="messages-container">
-            {% for message in messages %}
-                {% if message.role == 'user' %}
-                    <div class="message-container">
-                        <span class="user-message">{{ message.content }}</span>
-                    </div>
-                {% else %}
-                    <div class="message-container">
-                        <span class="assistant-message">{{ message.content }}</span>
-                    </div>
-               {% endif %}
-            {% endfor %}
+        <div class="sidebar">
+            <h2>Conversaciones</h2>
+            <ul id="conversations-list">
+                {% for conversation in conversations %}
+                    <li class="conversation-link" onclick="loadConversation({{ conversation.id }})">{{ conversation.id }}</li>
+                {% endfor %}
+            </ul>
         </div>
-        <div class="input-container">
-            <input id="message-input" class="input-field form-control" type="text" placeholder="Escribe un mensaje" autocomplete="off">
-            <button id="send-button" class="input-button btn btn-primary" type="button">Enviar</button>
+        <div class="chat-content" id="chat-content">
+            <h1>Chat</h1>
+            <div id="messages-container">
+                {% for message in messages %}
+                    {% if message.role == 'user' %}
+                        <div class="message-container">
+                            <span class="user-message">{{ message.content }}</span>
+                        </div>
+                    {% else %}
+                        <div class="message-container">
+                            <span class="assistant-message">{{ message.content }}</span>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="input-container">
+                <input id="message-input" class="input-field form-control" type="text" placeholder="Escribe un mensaje" autocomplete="off">
+                <button id="send-button" class="input-button btn btn-primary" type="button">Enviar</button>
+            </div>
         </div>
     </div>
 
@@ -84,6 +121,24 @@
                 messageContainer.append(message);
                 $('#messages-container').append(messageContainer);
                 scrollToBottom();
+            }
+
+            function loadConversation(conversationId) {
+                $.ajax({
+                    url: '/load-conversation',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ conversationId: conversationId }),
+                    success: function(response) {
+                        $('#messages-container').html('');
+                        messages = response.messages;
+                        for (var i = 0; i < messages.length; i++) {
+                            var role = messages[i].role;
+                            var content = messages[i].content;
+                            addMessage(role, content);
+                        }
+                    }
+                });
             }
 
             function sendMessage(message) {
